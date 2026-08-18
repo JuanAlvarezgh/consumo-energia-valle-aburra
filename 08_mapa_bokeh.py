@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Mapa del Valle de Aburrá con Bokeh: mapa_valle_bokeh.html
+Mapa interactivo del Valle de Aburra: manzanas coloreadas por consumo mediano y
+las direcciones de los medidores encima, separadas en cuatro capas segun como
+quedaron asignadas. Las capas se apagan desde la leyenda.
 
-Todo se arma desde Python, sin escribir JavaScript. Las cuatro capas de medidores
-son cuatro glifos separados y se prenden y apagan haciendo clic en la leyenda,
-que es una funcion propia de Bokeh (click_policy='hide'): apagando las capas de
-recuperados queda a la vista lo que pierde una union por interseccion sola.
-
-Los puntos se dibujan en WebGL, que aguanta las 589.799 direcciones. Las
-manzanas van por canvas, que es lo unico que hay para poligonos, asi que se usa
-la geometria simplificada a 12 m.
+Los puntos van en WebGL y las manzanas en canvas, que es lo que soporta Bokeh
+para poligonos, con la geometria simplificada a 18 m.
 """
 import os
 import sys
@@ -155,8 +151,6 @@ for k, (nombre, color) in enumerate(CAPAS):
     fuente = ColumnDataSource(datos)
     r = p.scatter('x', 'y', source=fuente, size=3.4, color=color,
                   line_color=None, alpha=0.85, legend_label=nombre)
-    if k == 0:
-        medidor = r
     log('capa %s: %d direcciones' % (nombre, len(sub)))
 
 p.add_tools(HoverTool(renderers=[manzanas], attachment='right', tooltips=[

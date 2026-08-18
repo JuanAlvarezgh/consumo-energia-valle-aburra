@@ -73,7 +73,6 @@ de la calle.
 |---|---|
 | `01_asignar_medidores.py` | Lee la geodatabase, asigna, valida contra el censo y agrega por manzana |
 | `08_mapa_bokeh.py` | Mapa interactivo del valle con Bokeh |
-| `09_notebook.py` | Arma y ejecuta el notebook de análisis |
 | `analisis_energia.ipynb` | El análisis: seis preguntas, seis gráficas, con las salidas dentro |
 | `graficas/` | Las gráficas en PNG |
 | `mapa_valle_bokeh.html` | Mapa del valle: 22.000 manzanas y 589.799 direcciones, con las capas de asignación conmutables desde la leyenda |
@@ -92,6 +91,6 @@ referencia MAGNA-SIRGAS / Origen Nacional, EPSG:9377. No se incluye en el reposi
 
 ## Entorno
 
-Python 3.12 con geopandas, shapely, pyogrio, pandas, matplotlib, bokeh y nbclient. Los
+Python 3.12 con geopandas, shapely, pyogrio, pandas, matplotlib y bokeh. Los
 scripts se corren con el intérprete que trae QGIS, que ya incluye la parte geoespacial.
 El paso pesado, 1,36 millones de puntos contra 22.000 polígonos, tarda 50 segundos.
