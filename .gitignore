@@ -1,0 +1,15 @@
+# Salidas pesadas del pipeline: pasan del limite de 100 MB de GitHub y se
+# reconstruyen con 01_asignar_medidores.py en 50 segundos.
+manzanas_medidores.gpkg
+medidores_asignados.csv
+
+# Fuente original, 1,2 GB
+UrbanAnalysis.gdb/
+
+# Version en canvas del mapa: se publica el HTML terminado, no su plantilla
+plantilla_valle.html
+07_mapa_valle.py
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
