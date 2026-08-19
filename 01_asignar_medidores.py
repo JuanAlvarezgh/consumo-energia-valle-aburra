@@ -6,6 +6,7 @@ _raiz = pathlib.Path(sys.executable).parents[1]
 os.environ.setdefault('PROJ_DATA', str(_raiz / 'share' / 'proj'))
 os.environ.setdefault('GDAL_DATA', str(_raiz / 'apps' / 'gdal' / 'share' / 'gdal'))
 
+import re
 import time
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ GDB = str(BASE.parent / 'UrbanAnalysis.gdb')
 SALIDA = str(BASE)
 UMBRAL  = 7.5   # metros: media calzada del Valle de Aburra (corredor mediano 11,6 m)
 AMBIGUO = 2.0   # si la segunda manzana esta a menos de esto, la asignacion es dudosa
+RESPALDO = 3    # medidores que debe tener una manzana para servir de evidencia
 MUNICIPIOS = ['05001', '05079', '05088', '05129', '05212',
               '05266', '05308', '05360', '05380', '05631']
 
@@ -46,7 +48,8 @@ med['X'], med['Y'] = xy[:, 0], xy[:, 1]
 log("medidores: %d" % len(med))
 
 
-coord = med.groupby(['X', 'Y'], sort=False).size().reset_index(name='n_medidores')
+coord = med.groupby(['X', 'Y'], sort=False).agg(
+    n_medidores=('Direccion', 'size'), direccion=('Direccion', 'first')).reset_index()
 puntos = shapely.points(coord.X.values, coord.Y.values)
 log("coordenadas unicas: %d (%.1f %% del total)" % (len(coord), 100 * len(coord) / len(med)))
 
@@ -84,8 +87,56 @@ log("coordenadas -> dentro: %d | cercano: %d | sin asignar: %d" % (
     (coord.metodo == 'dentro').sum(), (coord.metodo == 'cercano').sum(),
     (coord.metodo == 'no_asignado').sum()))
 
+# ------------------------------------ desempate por nomenclatura de la direccion
+# En "CL 88 A CR 74 -4" la placa indica el costado de la via: en el 83 % de los
+# grupos via-manzana las placas son de una sola paridad. Se toma como evidencia
+# lo que hacen los medidores que caen dentro de una manzana y con eso se rompe
+# el empate de los ambiguos. Medido contra los casos donde la geometria si
+# decide, la regla acierta el 85 %.
+coord['manz_i2'] = -1
+coord.loc[segunda.pt.values, 'manz_i2'] = segunda.mz.values
+
+PATRON = re.compile(
+    r'^\s*(CL|CR|KR|DG|TV|DIAG|TRAN|AVDA|CIRC|AV)\s+([0-9]+)\s*([A-Z]{0,2})\s*'
+    r'(SUR|ESTE|NORTE)?\s+(?:CL|CR|KR|DG|TV|DIAG|TRAN|AVDA|CIRC|AV)\s+'
+    r'([0-9]+)\s*[A-Z]{0,2}\s*(?:SUR|ESTE|NORTE)?\s*-\s*([0-9]+)')
+campos = coord.direccion.fillna('').str.extract(PATRON)
+coord['via'] = campos[0].fillna('') + campos[1].fillna('') + campos[2].fillna('') + campos[3].fillna('')
+coord.loc[campos[0].isna(), 'via'] = np.nan
+coord['cruce'] = pd.to_numeric(campos[4], errors='coerce')
+coord['paridad'] = pd.to_numeric(campos[5], errors='coerce') % 2
+legible = coord.via.notna() & coord.paridad.notna()
+
+evidencia = (coord[legible & (coord.metodo == 'dentro')]
+             .groupby(['via', 'cruce', 'paridad', 'manz_i']).n_medidores.sum())
+evidencia = evidencia[evidencia >= RESPALDO]
+tabla = {}
+for (via, cruce, paridad, mz), n in evidencia.items():
+    tabla.setdefault((via, cruce, paridad), {})[mz] = n
+
+coord['dir_resuelve'] = 0
+objetivo = coord.index[legible & (coord.ambiguo == 1) & (coord.manz_i2 >= 0)]
+for i in objetivo:
+    respaldo = tabla.get((coord.via[i], coord.cruce[i], coord.paridad[i]))
+    if not respaldo:
+        continue
+    a, b = coord.manz_i[i], coord.manz_i2[i]
+    na, nb = respaldo.get(a, 0), respaldo.get(b, 0)
+    gana = a if (na and not nb) or (na and nb and na >= nb * 3) else (
+           b if (nb and not na) or (na and nb and nb >= na * 3) else -1)
+    if gana >= 0:
+        coord.loc[i, 'manz_i'] = gana
+        coord.loc[i, 'dir_resuelve'] = 1
+
+cambian = int((coord.dir_resuelve == 1).sum())
+coord['cod_manzana'] = np.where(coord.manz_i >= 0,
+                                manz.COD_DANE_A.values[coord.manz_i.clip(lower=0)], '')
+log("direccion legible en %d coordenadas | la nomenclatura resuelve %d ambiguas"
+    % (int(legible.sum()), cambian))
+
 # ------------------------------------------------ se devuelve a cada medidor
-med = med.merge(coord[['X', 'Y', 'cod_manzana', 'dist_m', 'metodo', 'ambiguo']],
+med = med.merge(coord[['X', 'Y', 'cod_manzana', 'dist_m', 'metodo', 'ambiguo',
+                       'dir_resuelve']],
                 on=['X', 'Y'], how='left')
 total = len(med)
 print("\n=== COBERTURA (%d medidores) ===" % total)
@@ -120,6 +171,7 @@ g = pd.DataFrame({
     'med_dentro':      asig[asig.metodo == 'dentro'].groupby('cod_manzana').size(),
     'med_cercano':     asig[asig.metodo == 'cercano'].groupby('cod_manzana').size(),
     'med_ambiguo':     asig.groupby('cod_manzana').ambiguo.sum(),
+    'med_dir':         asig.groupby('cod_manzana').dir_resuelve.sum(),
     'consumo_prom':    res.groupby('cod_manzana').consumo.mean().round(1),
     'consumo_mediana': res.groupby('cod_manzana').consumo.median().round(1),
     'estrato_moda':    res.groupby('cod_manzana').ESTRATO.agg(

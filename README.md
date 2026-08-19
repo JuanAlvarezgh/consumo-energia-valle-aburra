@@ -49,13 +49,25 @@ residenciales de una manzana deben parecerse a las viviendas censadas ahí.
 La razón pasa de 0,55 a 0,91 medidores por vivienda censada. Ese salto es la prueba de
 que los recuperados pertenecen a la manzana a la que se les asignó.
 
-## Lo que la regla no resuelve
+## El empate, y cómo lo rompe la dirección
 
 51.155 medidores, el 3,8 % del total, tienen una segunda manzana a menos de 2 m de
-diferencia: están sobre el eje de la vía o en una esquina y el desempate es arbitrario.
-Van marcados con la bandera `ambiguo` en la salida, para poder excluirlos o revisarlos.
-La única forma de resolverlos es la nomenclatura de la dirección, que indica el costado
-de la calle.
+diferencia: están sobre el eje de la vía o en una esquina, y ahí la geometría decide por
+centímetros.
+
+Para esos casos entra la nomenclatura. En `CL 88 A CR 74 -4` la placa indica el costado
+de la vía: medido sobre los medidores que caen dentro de una manzana, el **83 % de los
+grupos vía-manzana tiene placas de una sola paridad**. La evidencia se arma con esos
+medidores, que no admiten duda, y con ella se rompe el empate.
+
+| | |
+|---|---|
+| Acierto de la regla, medido donde la geometría sí decide | 85 % |
+| Ambiguos que resuelve | 16.144 de 51.155 |
+| Ambiguos que quedan marcados | 35.011 |
+
+Como en un empate la geometría acierta el 50 %, una regla del 85 % es una mejora real.
+Los que no se resuelven quedan con la bandera `ambiguo` y se pueden excluir.
 
 ## Trampas del dato de consumo
 
@@ -73,10 +85,10 @@ de la calle.
 |---|---|
 | `01_asignar_medidores.py` | Lee la geodatabase, asigna, valida contra el censo y agrega por manzana |
 | `08_mapa_bokeh.py` | Mapa interactivo del valle con Bokeh |
-| `analisis_energia.ipynb` | El análisis: seis preguntas, seis gráficas, con las salidas dentro |
+| `analisis_energia.ipynb` | El análisis: el método paso por paso y seis preguntas con sus gráficas, con las salidas dentro |
 | `graficas/` | Las gráficas en PNG |
-| `mapa_valle_bokeh.html` | Mapa del valle: 22.000 manzanas y 589.799 direcciones, con las capas de asignación conmutables desde la leyenda |
-| `mapa_valle.html` | El mismo mapa en canvas, más liviano y con el umbral variable |
+| `mapa_valle.html` | Mapa principal: 22.000 manzanas y 589.799 direcciones. El umbral se cambia en vivo y las manzanas se vuelven a agregar con él; los medidores se pueden ocultar |
+| `mapa_valle_bokeh.html` | El mismo mapa hecho con Bokeh, con las capas de asignación conmutables desde la leyenda |
 | `manzanas_amva_medidores.csv` | Una fila por manzana: consumo agregado y variables del censo |
 
 Los dos archivos pesados que produce el pipeline, `manzanas_medidores.gpkg` y
