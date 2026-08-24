@@ -67,7 +67,10 @@ medidores, que no admiten duda, y con ella se rompe el empate.
 | Ambiguos que quedan marcados | 35.011 |
 
 Como en un empate la geometría acierta el 50 %, una regla del 85 % es una mejora real.
-Los que no se resuelven quedan con la bandera `ambiguo` y se pueden excluir.
+Los 35.011 que no se resuelven quedan con la bandera `ambiguo`. En el mapa no cuentan
+para ninguna manzana, y una casilla permite dárselos a la más cercana para ver cuánto
+pesa esa decisión: 1.269.102 medidores contra 1.304.113, y 19.322 manzanas contra
+19.448.
 
 ## Trampas del dato de consumo
 
